@@ -1,12 +1,14 @@
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react-swc';
+import path from 'path';
 
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd());
+  const env = loadEnv(mode, path.resolve(__dirname, '../../'));
+
   return {
     plugins: [react()],
     define: {
-      __BACKEND_URL__: JSON.stringify(env.VITE_BACKEND_URL ?? 'http://localhost:8000'),
+      __BACKEND_URL__: JSON.stringify(env.VITE_BACKEND_URL || 'http://localhost:8000'),
     },
     server: {
       port: 4173,
@@ -14,6 +16,13 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       sourcemap: true,
+      outDir: 'dist',
     },
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, 'src'),
+      },
+    },
+    envDir: path.resolve(__dirname, '../../'),
   };
 });
