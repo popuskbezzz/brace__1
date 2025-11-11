@@ -1,5 +1,4 @@
 from functools import lru_cache
-from typing import List
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -19,7 +18,7 @@ class Settings(BaseSettings):
     telegram_bot_token: str = ""
     telegram_webapp_secret: str = ""
 
-    cors_origins: List[str] = ["http://localhost", "http://localhost:4173"]
+    cors_origins: list[str] = ["http://localhost", "http://localhost:4173"]
 
     rate_limit: str = "60/minute"
 

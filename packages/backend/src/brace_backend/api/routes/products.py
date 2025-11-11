@@ -1,12 +1,13 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from brace_backend.api.deps import get_db
 from brace_backend.models import Product
-from brace_backend.schemas.common import Pagination, Product as ProductSchema
+from brace_backend.schemas.common import Pagination
+from brace_backend.schemas.common import Product as ProductSchema
 
 router = APIRouter(prefix="/products", tags=["Products"])
 
@@ -54,7 +55,7 @@ async def get_product(product_id: UUID, session: AsyncSession = Depends(get_db))
     result = await session.scalars(stmt)
     product = result.unique().one_or_none()
     if not product:
-        raise HTTPException(status_code=404, detail="Product not found")
+        raise HTTPException(status_code=404, detail="Product not found") from None
     return ProductSchema(
         id=product.id,
         name=product.name,

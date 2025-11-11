@@ -46,4 +46,13 @@ target-version = ['py312']
 
 [tool.ruff]
 line-length = 100
+target-version = "py312"
+fix = true  # <— переместили сюда!
+
+[tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "N", "RUF"]
+ignore = [
+    "B008",  # FastAPI: использование Depends() в параметрах функций допустимо
+    "E501",  # разрешаем длинные строки (до 100 символов, как в black)
+    "F821",  # forward references в SQLAlchemy (User, Product и т.д.)
+]

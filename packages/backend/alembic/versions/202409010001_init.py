@@ -2,10 +2,10 @@
 
 from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
 import sqlalchemy.dialects.postgresql as pg
 
+from alembic import op
 
 revision: str = "202409010001"
 down_revision: str | None = None

@@ -1,4 +1,3 @@
-from typing import Optional
 
 from sqlalchemy import ForeignKey, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -10,8 +9,8 @@ class Product(BaseModel):
     __tablename__ = "products"
 
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    description: Mapped[Optional[str]] = mapped_column(Text)
-    hero_media_url: Mapped[Optional[str]] = mapped_column(String(512))
+    description: Mapped[str | None] = mapped_column(Text)
+    hero_media_url: Mapped[str | None] = mapped_column(String(512))
 
     variants: Mapped[list["ProductVariant"]] = relationship(
         back_populates="product", cascade="all, delete-orphan"

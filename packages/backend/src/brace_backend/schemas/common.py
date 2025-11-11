@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -13,8 +12,8 @@ class Pagination(BaseModel):
 class ProductBase(BaseModel):
     id: UUID
     name: str
-    description: Optional[str] = None
-    hero_media_url: Optional[str] = None
+    description: str | None = None
+    hero_media_url: str | None = None
     created_at: datetime
     updated_at: datetime
 

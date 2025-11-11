@@ -5,7 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from brace_backend.api.deps import get_current_init_data, get_db
 from brace_backend.core.security import TelegramInitData
 from brace_backend.models import CartItem, Order, OrderItem
-from brace_backend.schemas.common import Order as OrderSchema, OrderCreate
+from brace_backend.schemas.common import Order as OrderSchema
+from brace_backend.schemas.common import OrderCreate
 from brace_backend.services.user_service import upsert_user
 
 router = APIRouter(prefix="/orders", tags=["Orders"])

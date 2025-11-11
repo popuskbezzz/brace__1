@@ -5,8 +5,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from brace_backend.api.deps import get_current_init_data, get_db
 from brace_backend.core.security import TelegramInitData
-from brace_backend.models import CartItem, Product, User
-from brace_backend.schemas.common import CartItem as CartItemSchema, CartItemCreate
+from brace_backend.models import CartItem, Product
+from brace_backend.schemas.common import CartItem as CartItemSchema
+from brace_backend.schemas.common import CartItemCreate
 from brace_backend.services.user_service import upsert_user
 
 router = APIRouter(prefix="/cart", tags=["Cart"])
@@ -46,7 +47,7 @@ async def add_to_cart(
 
     product = await session.scalar(select(Product).where(Product.id == payload.product_id))
     if not product:
-        raise HTTPException(status_code=404, detail="Product not found")
+        raise HTTPException(status_code=400, detail="Unable to add cart item") from None
 
     try:
         item = CartItem(
@@ -69,7 +70,7 @@ async def add_to_cart(
         )
         existing = await session.scalar(stmt)
         if not existing:
-            raise HTTPException(status_code=400, detail="Unable to add cart item")
+            raise HTTPException(status_code=400, detail="Unable to add cart item") from None
         existing.quantity += payload.quantity
         await session.commit()
         await session.refresh(existing)
@@ -86,7 +87,7 @@ async def remove_from_cart(
     stmt = select(CartItem).where(CartItem.id == item_id, CartItem.user_id == user.id)
     item = await session.scalar(stmt)
     if not item:
-        raise HTTPException(status_code=404, detail="Item not found")
+        raise HTTPException(status_code=400, detail="Unable to add cart item") from None
     await session.delete(item)
     await session.commit()
     return {"status": "deleted"}

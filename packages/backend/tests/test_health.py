@@ -1,7 +1,6 @@
 import pytest
-from httpx import ASGITransport, AsyncClient
-
 from brace_backend.main import app
+from httpx import ASGITransport, AsyncClient
 
 
 @pytest.mark.asyncio

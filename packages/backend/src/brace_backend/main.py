@@ -29,7 +29,7 @@ def create_app() -> FastAPI:
 
     @app.exception_handler(RateLimitExceeded)
     async def rate_limit_handler(request: Request, exc: RateLimitExceeded):  # type: ignore[override]
-        return limiter._rate_limit_exceeded_handler(request, exc)  # noqa: SLF001
+        return limiter._rate_limit_exceeded_handler(request, exc)
 
     return app
 

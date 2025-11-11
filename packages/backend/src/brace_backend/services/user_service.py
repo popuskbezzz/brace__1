@@ -1,8 +1,7 @@
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from brace_backend.core.security import TelegramInitData
 from brace_backend.models import User
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 async def upsert_user(session: AsyncSession, init_data: TelegramInitData) -> User:

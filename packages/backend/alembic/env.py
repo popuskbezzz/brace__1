@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from logging.config import fileConfig
 
-from alembic import context
+from brace_backend import models  # noqa: F401
+from brace_backend.core.config import settings
+from brace_backend.db.session import Base
 from sqlalchemy import engine_from_config, pool
 from sqlalchemy.engine import Connection, make_url
 
-from brace_backend.core.config import settings
-from brace_backend.db.session import Base
-from brace_backend import models  # noqa: F401
+from alembic import context
 
 config = context.config
 # Alembic executes migrations synchronously even when the application uses async
