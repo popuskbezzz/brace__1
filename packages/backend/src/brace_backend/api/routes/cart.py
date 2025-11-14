@@ -1,93 +1,40 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import AsyncSession
+from uuid import UUID
 
-from brace_backend.api.deps import get_current_init_data, get_db
-from brace_backend.core.security import TelegramInitData
-from brace_backend.models import CartItem, Product
-from brace_backend.schemas.common import CartItem as CartItemSchema
-from brace_backend.schemas.common import CartItemCreate
-from brace_backend.services.user_service import upsert_user
+from fastapi import APIRouter, Depends, status
+
+from brace_backend.api.deps import get_current_user, get_uow
+from brace_backend.db.uow import UnitOfWork
+from brace_backend.domain.user import User
+from brace_backend.schemas.cart import CartCollection, CartItemCreate, CartItemRead
+from brace_backend.schemas.common import ResourceResponse
+from brace_backend.services.cart_service import cart_service
 
 router = APIRouter(prefix="/cart", tags=["Cart"])
 
 
-def serialize_cart_item(item: CartItem) -> CartItemSchema:
-    return CartItemSchema(
-        id=item.id,
-        product_id=item.product_id,
-        product_name=item.product.name,
-        size=item.size,
-        quantity=item.quantity,
-        unit_price=float(item.unit_price),
-        hero_media_url=item.product.hero_media_url,
-    )
-
-
-@router.get("")
+@router.get("", response_model=ResourceResponse[CartCollection])
 async def get_cart(
-    init_data: TelegramInitData = Depends(get_current_init_data),
-    session: AsyncSession = Depends(get_db),
-) -> dict[str, list[CartItemSchema]]:
-    user = await upsert_user(session, init_data)
-    stmt = select(CartItem).where(CartItem.user_id == user.id)
-    result = await session.scalars(stmt)
-    items = result.unique().all()
-    return {"items": [serialize_cart_item(item) for item in items]}
+    current_user: User = Depends(get_current_user),
+    uow: UnitOfWork = Depends(get_uow),
+) -> ResourceResponse[CartCollection]:
+    cart = await cart_service.get_cart(uow, current_user.id)
+    return ResourceResponse[CartCollection](data=cart)
 
 
-@router.post("")
+@router.post("", response_model=ResourceResponse[CartItemRead], status_code=status.HTTP_201_CREATED)
 async def add_to_cart(
     payload: CartItemCreate,
-    init_data: TelegramInitData = Depends(get_current_init_data),
-    session: AsyncSession = Depends(get_db),
-) -> CartItemSchema:
-    user = await upsert_user(session, init_data)
-
-    product = await session.scalar(select(Product).where(Product.id == payload.product_id))
-    if not product:
-        raise HTTPException(status_code=400, detail="Unable to add cart item") from None
-
-    try:
-        item = CartItem(
-            user_id=user.id,
-            product_id=product.id,
-            size=payload.size,
-            quantity=payload.quantity,
-            unit_price=product.variants[0].price if product.variants else 0,
-        )
-        session.add(item)
-        await session.commit()
-        await session.refresh(item)
-        return serialize_cart_item(item)
-    except IntegrityError:
-        await session.rollback()
-        stmt = select(CartItem).where(
-            CartItem.user_id == user.id,
-            CartItem.product_id == product.id,
-            CartItem.size == payload.size,
-        )
-        existing = await session.scalar(stmt)
-        if not existing:
-            raise HTTPException(status_code=400, detail="Unable to add cart item") from None
-        existing.quantity += payload.quantity
-        await session.commit()
-        await session.refresh(existing)
-        return serialize_cart_item(existing)
+    current_user: User = Depends(get_current_user),
+    uow: UnitOfWork = Depends(get_uow),
+) -> ResourceResponse[CartItemRead]:
+    item = await cart_service.add_item(uow, user_id=current_user.id, payload=payload)
+    return ResourceResponse[CartItemRead](data=item)
 
 
-@router.delete("/{item_id}")
+@router.delete("/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def remove_from_cart(
-    item_id: str,
-    init_data: TelegramInitData = Depends(get_current_init_data),
-    session: AsyncSession = Depends(get_db),
-) -> dict[str, str]:
-    user = await upsert_user(session, init_data)
-    stmt = select(CartItem).where(CartItem.id == item_id, CartItem.user_id == user.id)
-    item = await session.scalar(stmt)
-    if not item:
-        raise HTTPException(status_code=400, detail="Unable to add cart item") from None
-    await session.delete(item)
-    await session.commit()
-    return {"status": "deleted"}
+    item_id: UUID,
+    current_user: User = Depends(get_current_user),
+    uow: UnitOfWork = Depends(get_uow),
+) -> None:
+    await cart_service.remove_item(uow, user_id=current_user.id, item_id=item_id)

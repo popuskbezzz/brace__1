@@ -1,18 +1,19 @@
 import asyncio
 import uuid
 
-from brace_backend.db.session import AsyncSessionLocal
-from brace_backend.models import Product, ProductVariant
 from sqlalchemy import select
+
+from brace_backend.db.session import session_manager
+from brace_backend.domain import Product, ProductVariant
 
 
 async def seed_products() -> None:
-    async with AsyncSessionLocal() as session:
+    async with session_manager.session() as session:
         result = await session.scalars(select(Product))
         if result.first():
             return
 
-        products = []
+        products: list[Product] = []
         for idx in range(1, 7):
             product = Product(
                 id=uuid.uuid4(),

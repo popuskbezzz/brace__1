@@ -1,8 +1,12 @@
+from collections.abc import AsyncIterator
+
 from fastapi import Depends, Header
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from brace_backend.core.security import TelegramInitData, validate_request
-from brace_backend.db.session import get_session
+from brace_backend.db.session import session_manager
+from brace_backend.db.uow import UnitOfWork
+from brace_backend.domain.user import User
+from brace_backend.services.user_service import user_service
 
 
 async def get_current_init_data(
@@ -11,5 +15,13 @@ async def get_current_init_data(
     return await validate_request(init_data)
 
 
-async def get_db(session: AsyncSession = Depends(get_session)) -> AsyncSession:
-    return session
+async def get_uow() -> AsyncIterator[UnitOfWork]:
+    async with session_manager.session() as session:
+        yield UnitOfWork(session)
+
+
+async def get_current_user(
+    init_data: TelegramInitData = Depends(get_current_init_data),
+    uow: UnitOfWork = Depends(get_uow),
+) -> User:
+    return await user_service.sync_from_telegram(uow, init_data)

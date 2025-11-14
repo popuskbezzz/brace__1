@@ -9,10 +9,18 @@ class Settings(BaseSettings):
     app_name: str = "BRACE Backend"
     environment: str = "development"
     log_level: str = "INFO"
+    log_json: bool = True
+    log_format: str = (
+        "{time:YYYY-MM-DD HH:mm:ss.SSS} | {level} | trace_id={extra[trace_id]} | {message}"
+    )
+    trace_header: str = "X-Trace-Id"
 
     # Psycopg's async driver ships pre-built wheels, so it stays compatible with Python 3.14+
     # without requiring users to compile asyncpg locally.
     database_url: str = "postgresql+psycopg_async://postgres:postgres@db:5432/brace"
+    database_echo: bool = False
+    database_pool_size: int = 5
+    database_max_overflow: int = 5
     redis_url: str = "redis://redis:6379/0"
 
     telegram_bot_token: str = ""

@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from logging.config import fileConfig
 
-from brace_backend import models  # noqa: F401
+from brace_backend import domain  # noqa: F401
 from brace_backend.core.config import settings
-from brace_backend.db.session import Base
+from brace_backend.domain.base import Base
 from sqlalchemy import engine_from_config, pool
 from sqlalchemy.engine import Connection, make_url
 

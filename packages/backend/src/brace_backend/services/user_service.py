@@ -1,32 +1,36 @@
+from __future__ import annotations
+
+from brace_backend.core.exceptions import ValidationError
 from brace_backend.core.security import TelegramInitData
-from brace_backend.models import User
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from brace_backend.db.uow import UnitOfWork
+from brace_backend.domain.user import User
 
 
-async def upsert_user(session: AsyncSession, init_data: TelegramInitData) -> User:
-    user_payload = init_data.user
-    telegram_id = user_payload.get("id")
+class UserService:
+    async def sync_from_telegram(self, uow: UnitOfWork, init_data: TelegramInitData) -> User:
+        payload = init_data.user
+        telegram_id = payload.get("id")
+        if telegram_id is None:
+            raise ValidationError("Telegram payload is missing the `id` field.")
 
-    stmt = select(User).where(User.telegram_id == telegram_id)
-    existing = await session.scalar(stmt)
-    if existing:
-        existing.first_name = user_payload.get("first_name")
-        existing.last_name = user_payload.get("last_name")
-        existing.username = user_payload.get("username")
-        existing.language_code = user_payload.get("language_code")
-        await session.commit()
-        await session.refresh(existing)
-        return existing
+        user = await uow.users.get_by_telegram_id(int(telegram_id))
+        if user:
+            await uow.users.update_from_payload(user, payload)
+        else:
+            user = User(
+                telegram_id=int(telegram_id),
+                first_name=payload.get("first_name"),
+                last_name=payload.get("last_name"),
+                username=payload.get("username"),
+                language_code=payload.get("language_code"),
+            )
+            await uow.users.add(user)
 
-    user = User(
-        telegram_id=telegram_id,
-        first_name=user_payload.get("first_name"),
-        last_name=user_payload.get("last_name"),
-        username=user_payload.get("username"),
-        language_code=user_payload.get("language_code"),
-    )
-    session.add(user)
-    await session.commit()
-    await session.refresh(user)
-    return user
+        await uow.commit()
+        await uow.refresh(user)
+        return user
+
+
+user_service = UserService()
+
+__all__ = ["user_service", "UserService"]

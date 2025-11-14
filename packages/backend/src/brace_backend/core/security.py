@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import hashlib
 import hmac
 import json
@@ -5,9 +7,8 @@ import time
 from typing import Any
 from urllib.parse import parse_qsl
 
-from fastapi import HTTPException, status
-
-from .config import settings
+from brace_backend.core.config import settings
+from brace_backend.core.exceptions import AccessDeniedError
 
 
 class TelegramInitData:
@@ -37,32 +38,42 @@ def parse_init_data(raw: str) -> dict[str, Any]:
     return data
 
 
+def _build_data_check_string(parsed: dict[str, Any]) -> str:
+    segments = []
+    for key, value in sorted(parsed.items()):
+        if isinstance(value, (dict, list)):
+            encoded = json.dumps(value, separators=(",", ":"), ensure_ascii=False)
+        else:
+            encoded = str(value)
+        segments.append(f"{key}={encoded}")
+    return "\n".join(segments)
+
+
 def verify_init_data(init_data: str) -> TelegramInitData:
     if not init_data:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing init data") from None
+        raise AccessDeniedError("Missing Telegram init data header.")
 
     parsed = parse_init_data(init_data)
     hash_value = parsed.pop("hash", None)
     if not hash_value:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid init data") from None
+        raise AccessDeniedError("Init data hash is missing.")
 
-    data_check_arr = [f"{k}={json.dumps(v, separators=(',', ':'), ensure_ascii=False) if isinstance(v, dict | list) else v}" for k, v in sorted(parsed.items())]
-    data_check_string = "\n".join(data_check_arr)
+    data_check_string = _build_data_check_string(parsed)
 
     secret_key = hashlib.sha256(settings.telegram_bot_token.encode()).digest()
     hmac_string = hmac.new(secret_key, msg=data_check_string.encode(), digestmod=hashlib.sha256).hexdigest()
 
     if not hmac.compare_digest(hmac_string, hash_value):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid signature") from None
+        raise AccessDeniedError("Telegram signature is invalid.")
 
     auth_date = int(parsed.get("auth_date", 0))
     if abs(time.time() - auth_date) > TELEGRAM_MAX_AGE_SECONDS:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Init data expired") from None
+        raise AccessDeniedError("Telegram init data has expired.")
 
     return TelegramInitData(parsed)
 
 
 async def validate_request(init_data_header: str | None) -> TelegramInitData:
     if not init_data_header:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing init data header") from None
+        raise AccessDeniedError("X-Telegram-Init-Data header is required.")
     return verify_init_data(init_data_header)

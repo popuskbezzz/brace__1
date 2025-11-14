@@ -1,75 +1,27 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, Depends
 
-from brace_backend.api.deps import get_db
-from brace_backend.models import Product
-from brace_backend.schemas.common import Pagination
-from brace_backend.schemas.common import Product as ProductSchema
+from brace_backend.api.deps import get_uow
+from brace_backend.db.uow import UnitOfWork
+from brace_backend.schemas.common import ListResponse, Pagination, ResourceResponse
+from brace_backend.schemas.products import ProductRead
+from brace_backend.services.product_service import product_service
 
 router = APIRouter(prefix="/products", tags=["Products"])
 
 
-@router.get("")
+@router.get("", response_model=ListResponse[ProductRead])
 async def list_products(
     pagination: Pagination = Depends(),
-    session: AsyncSession = Depends(get_db),
-) -> dict[str, list[ProductSchema]]:
-    stmt = (
-        select(Product)
-        .offset(pagination.offset)
-        .limit(pagination.limit)
-        .order_by(Product.created_at.desc())
-    )
-    result = await session.scalars(stmt)
-    products = result.unique().all()
-    payload = []
-    for product in products:
-        payload.append(
-            ProductSchema(
-                id=product.id,
-                name=product.name,
-                description=product.description,
-                hero_media_url=product.hero_media_url,
-                created_at=product.created_at,
-                updated_at=product.updated_at,
-                variants=[
-                    {
-                        "id": variant.id,
-                        "size": variant.size,
-                        "price": float(variant.price),
-                        "stock": variant.stock,
-                    }
-                    for variant in product.variants
-                ],
-            )
-        )
-    return {"items": payload}
+    uow: UnitOfWork = Depends(get_uow),
+) -> ListResponse[ProductRead]:
+    return await product_service.list_products(uow, pagination)
 
 
-@router.get("/{product_id}")
-async def get_product(product_id: UUID, session: AsyncSession = Depends(get_db)) -> ProductSchema:
-    stmt = select(Product).where(Product.id == product_id)
-    result = await session.scalars(stmt)
-    product = result.unique().one_or_none()
-    if not product:
-        raise HTTPException(status_code=404, detail="Product not found") from None
-    return ProductSchema(
-        id=product.id,
-        name=product.name,
-        description=product.description,
-        hero_media_url=product.hero_media_url,
-        created_at=product.created_at,
-        updated_at=product.updated_at,
-        variants=[
-            {
-                "id": variant.id,
-                "size": variant.size,
-                "price": float(variant.price),
-                "stock": variant.stock,
-            }
-            for variant in product.variants
-        ],
-    )
+@router.get("/{product_id}", response_model=ResourceResponse[ProductRead])
+async def get_product(
+    product_id: UUID,
+    uow: UnitOfWork = Depends(get_uow),
+) -> ResourceResponse[ProductRead]:
+    return await product_service.get_product(uow, product_id)
