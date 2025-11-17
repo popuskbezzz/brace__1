@@ -2,4 +2,5 @@ const fallback = typeof __BACKEND_URL__ !== 'undefined' ? __BACKEND_URL__ : 'htt
 
 export const env = {
   apiBaseUrl: fallback,
+  devInitData: import.meta.env.VITE_DEV_INIT_DATA ?? '',
 };

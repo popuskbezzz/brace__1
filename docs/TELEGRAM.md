@@ -30,7 +30,6 @@
    - Launch Mini App from the bot → open dev tools → confirm `initData` isn't empty
    - Add product to cart; backend logs should show `upsert_user`
    - Create order; ensure cart is cleared
-   - Monitor Redis/DB for new entries
 
 7. **Troubleshooting**
    - If you receive `Invalid signature`, double-check `BOT_TOKEN` and ensure there are no trailing spaces.

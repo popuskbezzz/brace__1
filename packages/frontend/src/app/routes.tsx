@@ -5,7 +5,9 @@ import { CartPage } from '@/pages/cart/CartPage';
 import { CatalogPage } from '@/pages/catalog/CatalogPage';
 import { HomePage } from '@/pages/home/HomePage';
 import { PlaceholderPage } from '@/pages/placeholder/PlaceholderPage';
+import { ProductDescriptionPage } from '@/pages/product/ProductDescriptionPage';
 import { ProductPage } from '@/pages/product/ProductPage';
+import { ProductSpecsPage } from '@/pages/product/ProductSpecsPage';
 import { ProfilePage } from '@/pages/profile/ProfilePage';
 import { SizeTablePage } from '@/pages/size-table/SizeTablePage';
 import { TextPage } from '@/pages/text/TextPage';
@@ -15,6 +17,8 @@ const routes: RouteObject[] = [
   { path: '/', element: <HomePage /> },
   { path: '/catalog', element: <CatalogPage /> },
   { path: '/product/:productId', element: <ProductPage /> },
+  { path: '/product/:productId/description', element: <ProductDescriptionPage /> },
+  { path: '/product/:productId/specs', element: <ProductSpecsPage /> },
   { path: '/cart', element: <CartPage /> },
   { path: '/profile', element: <ProfilePage /> },
   { path: '/size-table/:type', element: <SizeTablePage /> },

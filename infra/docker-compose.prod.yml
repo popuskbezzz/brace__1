@@ -7,13 +7,14 @@ services:
     env_file:
       - ../.env
     environment:
-      BRACE_DATABASE_URL: postgresql+psycopg://postgres:postgres@db:5432/brace
-      BRACE_REDIS_URL: redis://redis:6379/0
+      BRACE_DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/brace
+      ALEMBIC_DATABASE_URL: postgresql+psycopg://postgres:postgres@db:5432/brace
+      CORS_ORIGINS: '["*"]'
     depends_on:
       - db
-      - redis
     ports:
       - '8000:8000'
+
 
   frontend:
     build:
@@ -33,14 +34,8 @@ services:
       POSTGRES_DB: brace
     volumes:
       - db_data:/var/lib/postgresql/data
-
-  redis:
-    image: redis:7
-    restart: unless-stopped
-    command: redis-server --save 60 1 --loglevel warning
-    volumes:
-      - redis_data:/data
+    ports:
+      - "5432:5432"
 
 volumes:
   db_data:
-  redis_data:

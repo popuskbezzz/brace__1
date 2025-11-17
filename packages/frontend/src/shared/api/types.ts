@@ -1,39 +1,32 @@
-export type ApiErrorObject = {
-  status: number;
-  code: string;
-  title: string;
-  detail?: string;
-  trace_id?: string;
+export type ApiErrorPayload = {
+  type: string;
+  message: string;
 };
 
-export type ApiErrorResponse = {
-  errors: ApiErrorObject[];
+export type Pagination = {
+  page: number;
+  page_size: number;
+  total: number;
+  pages: number;
 };
 
-export type ApiListResponse<T> = {
-  data: T[];
-  meta?: {
-    limit?: number;
-    offset?: number;
-    total?: number;
-  };
+export type ApiEnvelope<T> = {
+  data: T | null;
+  error: ApiErrorPayload | null;
+  pagination?: Pagination | null;
 };
 
-export type ApiResourceResponse<T> = {
+export type ApiSuccess<T> = {
   data: T;
-  meta?: Record<string, unknown>;
+  pagination?: Pagination | null;
 };
 
-export class HttpError extends Error {
-  status: number;
-  code?: string;
-  traceId?: string;
+export class ApiError extends Error {
+  type: string;
 
-  constructor(message: string, options: { status: number; code?: string; traceId?: string }) {
+  constructor(message: string, type: string) {
     super(message);
-    this.name = 'HttpError';
-    this.status = options.status;
-    this.code = options.code;
-    this.traceId = options.traceId;
+    this.name = 'ApiError';
+    this.type = type;
   }
 }

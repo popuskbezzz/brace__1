@@ -1,17 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { cartKeys } from '@/entities/cart/api/cartApi';
-import type { ApiResourceResponse } from '@/shared/api/types';
+import type { Order } from '@/entities/order/model/types';
 import { apiClient } from '@/shared/api/httpClient';
-
-type OrderResponse = ApiResourceResponse<{
-  id: string;
-  status: string;
-  total_amount: number;
-}>;
-
-const createOrder = async () => {
-  const response = await apiClient.post<OrderResponse>('/orders', {});
+const createOrder = async (): Promise<Order> => {
+  const response = await apiClient.post<Order>('/orders', {});
   return response.data;
 };
 

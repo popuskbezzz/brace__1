@@ -1,14 +1,12 @@
 # Deployment Playbook
 
-Reference deployment to free/low-cost services: Render (backend), Railway (PostgreSQL + Redis), and Vercel (frontend). Adapt as needed.
+Reference deployment to free/low-cost services: Render (backend), Railway (PostgreSQL), and Vercel (frontend). Adapt as needed.
 
 ## 1. Provision Managed Services
 1. **Railway PostgreSQL**
    - Create a project → Add PostgreSQL.
    - Copy connection string → set `BRACE_DATABASE_URL` (use the `postgresql+psycopg_async://` dialect; Alembic automatically swaps to the sync driver).
-2. **Railway Redis**
-   - Add Redis plugin, copy URL → `BRACE_REDIS_URL`.
-3. **Render Backend Service**
+2. **Render Backend Service**
    - New Web Service → point to GitHub repo.
    - Build command: `cd packages/backend && poetry install --no-root && poetry run alembic upgrade head`
    - Start command: `cd packages/backend && poetry run uvicorn brace_backend.main:app --host 0.0.0.0 --port 8000`
@@ -24,7 +22,6 @@ Reference deployment to free/low-cost services: Render (backend), Railway (Postg
 | --- | --- | --- |
 | `BRACE_TELEGRAM_BOT_TOKEN` | backend | `123456:ABCDEF` |
 | `BRACE_DATABASE_URL` | backend | `postgresql+psycopg_async://user:pass@host:port/db` |
-| `BRACE_REDIS_URL` | backend | `redis://default:pass@host:port/0` |
 | `BRACE_CORS_ORIGINS` | backend | `["https://brace.vercel.app"]` |
 | `BRACE_RATE_LIMIT` | backend | `120/minute` |
 | `VITE_BACKEND_URL` | frontend | `https://brace-api.onrender.com` |
@@ -49,7 +46,6 @@ Reference deployment to free/low-cost services: Render (backend), Railway (Postg
 
 ## 5. Disaster Recovery
 - DB backups handled by Railway (enable daily snapshots).
-- Redis: enable persistence (AOF) or accept ephemeral data.
 - Store `.env` securely (1Password / Vault).
 
 ## 6. Rollback

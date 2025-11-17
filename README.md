@@ -4,7 +4,7 @@ BRACE is a production-ready monorepo for a Telegram Mini App that sells premium 
 
 ## Tech Stack
 - **Frontend**: Vite, React 18, TypeScript, TailwindCSS, TanStack Query, Zustand, Telegram WebApp SDK
-- **Backend**: FastAPI, async SQLAlchemy (psycopg 3 async driver), PostgreSQL, Redis, Alembic, SlowAPI rate limiting
+- **Backend**: FastAPI, async SQLAlchemy (psycopg 3 async driver), PostgreSQL, Alembic, SlowAPI rate limiting
 - **Infra**: Docker, docker-compose, nginx, GitHub Actions, Makefile helpers
 - **Security**: Telegram initData HMAC validation, DOMPurify, rate limiting, strict CORS
 
@@ -23,9 +23,9 @@ README.md, README-verify.md, DEPLOY.md, CHANGELOG.md, POSTMORTEM.md
 
 ## Key Features
 - Telegram initData verification middleware and `/api/verify-init` probe
-- Product, cart, order, and profile APIs with async PostgreSQL + Redis hooks
+- Product, cart, order, and profile APIs with async PostgreSQL
 - 11 fully responsive Telegram-focused screens (home, catalog, product, size UX, profile, cart, etc.)
-- Dockerized services (backend, frontend, PostgreSQL, Redis) runnable via one compose command
+- Dockerized services (backend, frontend, PostgreSQL) runnable via one compose command
 - GitHub Actions pipeline (lint → typecheck → test → build → deploy placeholder)
 - Comprehensive documentation: quickstart, verification, deployment, change-log, postmortem templates
 

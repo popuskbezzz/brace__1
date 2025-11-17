@@ -1,19 +1,13 @@
 import { useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
 
-import { fetchProductById, productKeys } from '@/entities/product/api/productApi';
 import { AddToCartForm } from '@/features/cart/add-to-cart/ui/AddToCartForm';
 import { Skeleton } from '@/shared/ui/Skeleton';
+import { useProductDetails } from '@/pages/product/useProductDetails';
 
 export const ProductPage = () => {
   const { productId } = useParams();
-
-  const { data: product, isLoading, isError } = useQuery({
-    queryKey: productId ? productKeys.detail(productId) : ['product'],
-    queryFn: () => fetchProductById(productId ?? ''),
-    enabled: Boolean(productId),
-  });
+  const { data: product, isLoading, isError } = useProductDetails(productId);
 
   const price = useMemo(() => {
     if (!product) {

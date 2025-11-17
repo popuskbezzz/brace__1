@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 
 import { fetchProducts, productKeys } from '@/entities/product/api/productApi';
+import type { Product } from '@/entities/product/model/types';
 import { ProductCard } from '@/entities/product/ui/ProductCard';
 import { ProductCardSkeleton } from '@/entities/product/ui/ProductCardSkeleton';
 import { SizeCalculator } from '@/features/size-calculator/ui/SizeCalculator';
@@ -9,11 +10,11 @@ import { Carousel } from '@/shared/components/Carousel';
 
 export const HomePage = () => {
   const { data, isLoading } = useQuery({
-    queryKey: productKeys.all,
-    queryFn: fetchProducts,
+    queryKey: productKeys.list(),
+    queryFn: () => fetchProducts(),
   });
 
-  const featured = data?.slice(0, 4) ?? [];
+  const featured: Product[] = (data?.items ?? []).slice(0, 4);
 
   return (
     <section className="space-y-6">

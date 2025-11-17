@@ -3,7 +3,8 @@ import WebApp from '@twa-dev/sdk';
 
 import { env } from '@/shared/config/env';
 
-import { HttpError, type ApiErrorResponse } from './types';
+import type { ApiEnvelope, ApiSuccess } from './types';
+import { ApiError } from './types';
 
 const instance = axios.create({
   baseURL: `${env.apiBaseUrl}/api`,
@@ -13,32 +14,40 @@ const instance = axios.create({
 instance.interceptors.request.use((config) => {
   const nextConfig = { ...config };
   nextConfig.headers = nextConfig.headers ?? {};
-  nextConfig.headers['X-Telegram-Init-Data'] = WebApp.initData || '';
+  const initData = WebApp.initData || env.devInitData || '';
+  nextConfig.headers['X-Telegram-Init-Data'] = initData;
   return nextConfig;
 });
 
 instance.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.data?.errors) {
-      const apiError = error.response.data as ApiErrorResponse;
-      const [first] = apiError.errors;
-      throw new HttpError(first?.title ?? 'Request failed', {
-        status: first?.status ?? error.response.status ?? 500,
-        code: first?.code,
-        traceId: first?.trace_id,
-      });
+    const payload = error.response?.data as ApiEnvelope<unknown> | undefined;
+    if (payload?.error) {
+      throw new ApiError(payload.error.message, payload.error.type);
     }
-
-    throw new HttpError(error.message || 'Unexpected error', {
-      status: error.response?.status ?? 500,
-    });
+    throw new ApiError(error.message || 'Unexpected error', 'network_error');
   },
 );
 
-const request = async <T>(config: AxiosRequestConfig): Promise<T> => {
-  const response = await instance.request<T>(config);
-  return response.data;
+export const parseApiEnvelope = <T>(payload: ApiEnvelope<T>): ApiSuccess<T> => {
+  if (payload.error) {
+    throw new ApiError(payload.error.message, payload.error.type);
+  }
+
+  if (payload.data === null) {
+    throw new ApiError('Empty response payload', 'empty_response');
+  }
+
+  return {
+    data: payload.data,
+    pagination: payload.pagination ?? null,
+  };
+};
+
+const request = async <T>(config: AxiosRequestConfig): Promise<ApiSuccess<T>> => {
+  const response = await instance.request<ApiEnvelope<T>>(config);
+  return parseApiEnvelope(response.data);
 };
 
 export const apiClient = {
