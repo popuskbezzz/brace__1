@@ -1,5 +1,5 @@
-from collections.abc import AsyncIterator
 import logging
+from collections.abc import AsyncIterator
 
 from fastapi import Depends, Header
 
@@ -9,7 +9,6 @@ from brace_backend.db.session import session_manager
 from brace_backend.db.uow import UnitOfWork
 from brace_backend.domain.user import User
 from brace_backend.services.user_service import user_service
-
 
 logger = logging.getLogger(__name__)
 

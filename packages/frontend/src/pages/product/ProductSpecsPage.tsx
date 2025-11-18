@@ -1,5 +1,6 @@
 import { Link, useParams } from 'react-router-dom';
 
+import type { ProductVariant } from '@/entities/product/model/types';
 import { useProductDetails } from '@/pages/product/useProductDetails';
 import { formatPrice } from '@/shared/lib/money';
 import { Skeleton } from '@/shared/ui/Skeleton';
@@ -27,7 +28,7 @@ export const ProductSpecsPage = () => {
     );
   }
 
-  const variants = product.variants ?? []; // PRINCIPAL-FIX: variants guard
+  const variants: ProductVariant[] = product.variants ?? []; // PRINCIPAL-FIX: variants guard
 
   return (
     <section className="space-y-4">

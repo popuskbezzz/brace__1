@@ -60,7 +60,7 @@ def build_data_check_string(payload: dict[str, Any]) -> str:
     """Canonical string builder as described in Telegram WebApp docs."""
     segments = []
     for key, value in sorted(payload.items()):
-        if isinstance(value, (dict, list)):
+        if isinstance(value, dict | list):
             encoded = json.dumps(value, separators=(",", ":"), ensure_ascii=False)
         else:
             encoded = str(value)

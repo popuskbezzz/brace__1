@@ -8,7 +8,6 @@ from typing import Any
 from pydantic import Field, ValidationError
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-
 _MONOREPO_ROOT = Path(__file__).resolve().parents[4]
 _BACKEND_ROOT = Path(__file__).resolve().parents[3]
 _DEFAULT_ENV_FILES = (".env", ".env.local")
