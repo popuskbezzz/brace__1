@@ -31,6 +31,7 @@ def _engine() -> Engine:
     interval = int(os.getenv("SEED_DB_RETRY_INTERVAL", "3"))
     attempt = 1
     seed_url = _resolve_seed_url()
+    LOG.info("Seed using database URL: %s", seed_url)
 
     while True:
         try:
@@ -39,10 +40,10 @@ def _engine() -> Engine:
                 conn.execute(text("SELECT 1"))
         except SQLAlchemyError as exc:
             LOG.warning(
-                "Seed database connection failed; retrying",
-                attempt=attempt,
-                retries=retries,
-                error=str(exc),
+                "Seed database connection failed; retrying (attempt %d/%d): %s",
+                attempt,
+                retries,
+                exc,
             )
             if attempt >= retries:
                 raise
