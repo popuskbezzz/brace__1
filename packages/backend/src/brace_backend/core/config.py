@@ -5,7 +5,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-from pydantic import Field, ValidationError
+from pydantic import AliasChoices, Field, ValidationError
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _MONOREPO_ROOT = Path(__file__).resolve().parents[4]
@@ -41,7 +41,10 @@ class Settings(BaseSettings):
 
     # Psycopg's async driver ships pre-built wheels, so it stays compatible with Python 3.14+
     # without requiring users to compile asyncpg locally.
-    database_url: str = "postgresql+psycopg_async://postgres:postgres@db:5432/brace"
+    database_url: str = Field(
+        default="postgresql+psycopg_async://postgres:postgres@db:5432/brace",
+        validation_alias=AliasChoices("BRACE_DATABASE_URL", "DATABASE_URL"),
+    )
     database_echo: bool = False
     database_pool_size: int = 5
     database_max_overflow: int = 5
@@ -71,6 +74,12 @@ class Settings(BaseSettings):
             and self.allow_dev_mode
             and self.telegram_dev_mode
         )
+
+    @property
+    def sync_database_url(self) -> str:
+        from brace_backend.core.database import ensure_sync_dsn
+
+        return ensure_sync_dsn(self.database_url)
 
     cors_origins: list[str] = ["http://localhost", "http://localhost:4173"]
 
