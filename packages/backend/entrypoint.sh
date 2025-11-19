@@ -1,5 +1,6 @@
-#!/bin/sh
+#!/bin/bash
 set -euo pipefail
+set -x
 
 if [ "$#" -eq 0 ]; then
   set -- uvicorn brace_backend.main:app --host 0.0.0.0 --port 8000
@@ -35,7 +36,7 @@ wait_for_database() {
   attempt=1
 
   while [ "$attempt" -le "$retries" ]; do
-    if python - "$ALEMBIC_DATABASE_URL" <<'PY'; then
+    if python - "$ALEMBIC_DATABASE_URL" <<'PY'
 import sys
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
