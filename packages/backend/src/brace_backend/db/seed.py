@@ -6,7 +6,7 @@ import time
 import uuid
 
 from sqlalchemy import func, select, text
-from sqlalchemy.engine import Engine, create_engine
+from sqlalchemy.engine import Engine, create_engine, make_url
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -25,12 +25,22 @@ def _resolve_seed_url() -> str:
     return settings.sync_database_url
 
 
+def _validate_seed_url(url: str) -> str:
+    parsed = make_url(url)
+    if not parsed.host:
+        raise ValueError(
+            f"Seed database URL is missing host information: {url}. "
+            "Set BRACE_DATABASE_URL/DATABASE_URL to your Render Postgres DSN."
+        )
+    return url
+
+
 def _engine() -> Engine:
     """Return a synchronous engine suitable for seeding."""
     retries = int(os.getenv("SEED_DB_MAX_RETRIES", "10"))
     interval = int(os.getenv("SEED_DB_RETRY_INTERVAL", "3"))
     attempt = 1
-    seed_url = _resolve_seed_url()
+    seed_url = _validate_seed_url(_resolve_seed_url())
     LOG.info("Seed using database URL: %s", seed_url)
 
     while True:
