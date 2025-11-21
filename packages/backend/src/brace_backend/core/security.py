@@ -6,6 +6,7 @@ import json
 import logging
 import threading
 import time
+from json import JSONDecodeError
 from typing import Any
 from urllib.parse import parse_qsl
 
@@ -42,15 +43,20 @@ class TelegramInitData:
 
 
 TELEGRAM_MAX_AGE_SECONDS = 60 * 60
+TELEGRAM_CLOCK_SKEW_SECONDS = 30
+TELEGRAM_SIGNATURE_SALT = b"WebAppData"
 
 
 def parse_init_data(raw: str) -> dict[str, Any]:
     """Decode Telegram init data query string into Python objects."""
-    pairs = parse_qsl(raw, strict_parsing=False)
+    pairs = parse_qsl(raw, strict_parsing=False, keep_blank_values=True)
     data: dict[str, Any] = {}
     for key, value in pairs:
         if key == "user":
-            data[key] = json.loads(value)
+            try:
+                data[key] = json.loads(value)
+            except JSONDecodeError as exc:
+                raise AccessDeniedError("Telegram user payload cannot be decoded.") from exc
         else:
             data[key] = value
     return data
@@ -68,13 +74,38 @@ def build_data_check_string(payload: dict[str, Any]) -> str:
     return "\n".join(segments)
 
 
-def build_signature(payload: dict[str, Any], *, secret_token: str) -> str:
-    """Generate the HTTPS-style HMAC signature used by Telegram."""
+def derive_hmac_key(secret_token: str) -> bytes:
+    """Derive the signing key per Telegram spec."""
     if not secret_token:
         raise AccessDeniedError("Telegram bot token is not configured.")
-    secret_key = hashlib.sha256(secret_token.encode()).digest()
+    return hmac.new(
+        key=TELEGRAM_SIGNATURE_SALT,
+        msg=secret_token.encode(),
+        digestmod=hashlib.sha256,
+    ).digest()
+
+
+def build_signature(payload: dict[str, Any], *, secret_token: str) -> str:
+    """Generate the HTTPS-style HMAC signature used by Telegram."""
+    secret_key = derive_hmac_key(secret_token)
     check_string = build_data_check_string(payload)
-    return hmac.new(secret_key, msg=check_string.encode(), digestmod=hashlib.sha256).hexdigest()
+    return hmac.new(
+        key=secret_key,
+        msg=check_string.encode(),
+        digestmod=hashlib.sha256
+    ).hexdigest()
+
+
+def validate_payload_schema(payload: dict[str, Any]) -> None:
+    """Ensure Telegram payload contains the minimum required structure."""
+    user = payload.get("user")
+    if not isinstance(user, dict):
+        raise AccessDeniedError("Telegram init data user payload is missing.")
+    if "id" not in user:
+        raise AccessDeniedError("Telegram init data user payload is invalid.")
+    nonce = payload.get("nonce")
+    if not isinstance(nonce, str) or not nonce:
+        raise AccessDeniedError("Telegram init data nonce is required.")
 
 
 class NonceReplayProtector:
@@ -162,18 +193,25 @@ def verify_init_data(init_data: str) -> TelegramInitData:
     if not provided_hash:
         raise AccessDeniedError("Init data hash is missing.")
 
+    validate_payload_schema(parsed)
+
     secret_source = settings.telegram_webapp_secret or settings.telegram_bot_token
+    if not secret_source:
+        raise AccessDeniedError("Telegram bot token is not configured.")
     expected_hash = build_signature(parsed, secret_token=secret_source)
     if not hmac.compare_digest(expected_hash, provided_hash):
         raise AccessDeniedError("Telegram signature is invalid.")
 
-    auth_date = int(parsed.get("auth_date", 0))
+    try:
+        auth_date = int(parsed.get("auth_date", 0))
+    except (TypeError, ValueError):
+        raise AccessDeniedError("Telegram init data timestamp is invalid.")
     now = time.time()
     if auth_date <= 0:
         raise AccessDeniedError("Telegram init data timestamp is invalid.")
     if now - auth_date > TELEGRAM_MAX_AGE_SECONDS:
         raise AccessDeniedError("Telegram init data has expired.")
-    if auth_date - now > 30:
+    if auth_date - now > TELEGRAM_CLOCK_SKEW_SECONDS:
         raise AccessDeniedError("Telegram init data timestamp is in the future.")
 
     nonce = str(parsed.get("nonce", ""))

@@ -5,7 +5,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-from pydantic import AliasChoices, Field, ValidationError
+from pydantic import AliasChoices, Field, ValidationError, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _MONOREPO_ROOT = Path(__file__).resolve().parents[4]
@@ -54,7 +54,7 @@ class Settings(BaseSettings):
     # # .env
     # # infra/docker-compose.prod.yml
     # # k8s/deploy.yaml
-    telegram_bot_token: str = Field(..., min_length=1)
+    telegram_bot_token: str | None = Field(default=None)
 
     telegram_webapp_secret: str | None = None
     telegram_dev_mode: bool = False
@@ -96,6 +96,23 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+    @model_validator(mode="after")
+    def ensure_telegram_credentials(self) -> "Settings":
+        """Allow both BRACE_* and bare Telegram env vars while enforcing presence."""
+        bot_token = (self.telegram_bot_token or os.getenv("TELEGRAM_BOT_TOKEN") or "").strip()
+        if not bot_token:
+            raise ValueError(
+                "Telegram bot token is required. "
+                "Set BRACE_TELEGRAM_BOT_TOKEN or TELEGRAM_BOT_TOKEN."
+            )
+        self.telegram_bot_token = bot_token
+
+        webapp_secret = (
+            self.telegram_webapp_secret or os.getenv("TELEGRAM_WEBAPP_SECRET") or ""
+        ).strip()
+        self.telegram_webapp_secret = webapp_secret or None
+        return self
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
@@ -103,8 +120,8 @@ def get_settings() -> Settings:
         return Settings()
     except ValidationError as exc:  # pragma: no cover - fails fast during startup
         raise RuntimeError(
-            "BRACE_TELEGRAM_BOT_TOKEN is required. Add it to .env, "
-            "infra/docker-compose.prod.yml, and k8s/deploy.yaml."
+            "Telegram credentials are required. Define BRACE_TELEGRAM_BOT_TOKEN "
+            "or TELEGRAM_BOT_TOKEN in .env, infra/docker-compose.prod.yml, and k8s/deploy.yaml."
         ) from exc
 
 
