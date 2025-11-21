@@ -65,6 +65,7 @@ class Settings(BaseSettings):
         "username": "brace_dev",
         "language_code": "en",
     }
+    telegram_debug_logging: bool = False
 
     @property
     def telegram_dev_mode_enabled(self) -> bool:

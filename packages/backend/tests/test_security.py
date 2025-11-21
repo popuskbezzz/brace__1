@@ -31,6 +31,7 @@ def override_settings(monkeypatch):
         telegram_dev_mode = False
         telegram_dev_user: ClassVar[dict] = {"id": 999, "username": "dev"}
         redis_url = "memory://"
+        telegram_debug_logging = False
 
         @property
         def telegram_dev_mode_enabled(self) -> bool:

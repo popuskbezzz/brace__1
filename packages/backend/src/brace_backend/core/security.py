@@ -23,6 +23,14 @@ except Exception:  # pragma: no cover
 logger = logging.getLogger(__name__)
 
 
+def _log_auth_debug(message: str, **extra: Any) -> None:
+    """Emit structured Telegram auth debug logs when explicitly enabled."""
+    if not getattr(settings, "telegram_debug_logging", False):
+        return
+    safe_extra = {key: value for key, value in extra.items() if value is not None}
+    logger.info("TELEGRAM AUTH DEBUG | %s | %s", message, safe_extra)
+
+
 class TelegramInitData:
     """Thin wrapper exposing structured Telegram WebApp payload fields."""
 
@@ -85,10 +93,15 @@ def derive_hmac_key(secret_token: str) -> bytes:
     ).digest()
 
 
-def build_signature(payload: dict[str, Any], *, secret_token: str) -> str:
+def build_signature(
+    payload: dict[str, Any],
+    *,
+    secret_token: str,
+    check_string: str | None = None,
+) -> str:
     """Generate the HTTPS-style HMAC signature used by Telegram."""
     secret_key = derive_hmac_key(secret_token)
-    check_string = build_data_check_string(payload)
+    check_string = check_string or build_data_check_string(payload)
     return hmac.new(
         key=secret_key,
         msg=check_string.encode(),
@@ -187,35 +200,66 @@ _replay_protector = NonceReplayProtector(
 def verify_init_data(init_data: str) -> TelegramInitData:
     if not init_data:
         raise AccessDeniedError("Missing Telegram init data header.")
+    _log_auth_debug(
+        "init_data_received",
+        raw_length=len(init_data),
+        raw_sample=init_data[:200],
+    )
 
     parsed = parse_init_data(init_data)
     provided_hash = parsed.pop("hash", None)
     if not provided_hash:
+        _log_auth_debug("hash_missing", keys=list(parsed.keys()))
         raise AccessDeniedError("Init data hash is missing.")
+    _log_auth_debug(
+        "init_data_parsed",
+        keys=list(parsed.keys()),
+        has_user="user" in parsed,
+        has_nonce=bool(parsed.get("nonce")),
+    )
 
     validate_payload_schema(parsed)
 
     secret_source = settings.telegram_webapp_secret or settings.telegram_bot_token
     if not secret_source:
         raise AccessDeniedError("Telegram bot token is not configured.")
-    expected_hash = build_signature(parsed, secret_token=secret_source)
-    if not hmac.compare_digest(expected_hash, provided_hash):
+    check_string = build_data_check_string(parsed)
+    _log_auth_debug(
+        "signature_inputs_prepared",
+        check_string_length=len(check_string),
+        bot_token_present=bool(secret_source),
+        bot_token_length=len(secret_source) if secret_source else 0,
+    )
+    expected_hash = build_signature(parsed, secret_token=secret_source, check_string=check_string)
+    hashes_match = hmac.compare_digest(expected_hash, provided_hash)
+    _log_auth_debug(
+        "signature_computed",
+        provided_hash=provided_hash,
+        expected_hash=expected_hash,
+        hashes_match=hashes_match,
+    )
+    if not hashes_match:
         raise AccessDeniedError("Telegram signature is invalid.")
 
     try:
         auth_date = int(parsed.get("auth_date", 0))
     except (TypeError, ValueError):
+        _log_auth_debug("timestamp_invalid", value=parsed.get("auth_date"))
         raise AccessDeniedError("Telegram init data timestamp is invalid.")
     now = time.time()
     if auth_date <= 0:
+        _log_auth_debug("timestamp_missing_or_zero")
         raise AccessDeniedError("Telegram init data timestamp is invalid.")
     if now - auth_date > TELEGRAM_MAX_AGE_SECONDS:
+        _log_auth_debug("timestamp_expired", auth_date=auth_date, now=int(now))
         raise AccessDeniedError("Telegram init data has expired.")
     if auth_date - now > TELEGRAM_CLOCK_SKEW_SECONDS:
+        _log_auth_debug("timestamp_in_future", auth_date=auth_date, now=int(now))
         raise AccessDeniedError("Telegram init data timestamp is in the future.")
 
     nonce = str(parsed.get("nonce", ""))
     _replay_protector.ensure_unique(nonce)
+    _log_auth_debug("nonce_ok", nonce=nonce)
 
     return TelegramInitData(parsed)
 
