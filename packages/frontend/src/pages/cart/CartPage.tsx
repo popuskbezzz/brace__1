@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import { Badge } from '@/components/brace';
 import type { Order } from '@/entities/order/model/types';
 import { useCreateOrderMutation } from '@/features/order/create-order/model/useCreateOrderMutation';
 import { useCartQuery } from '@/shared/api/queries';
@@ -31,42 +32,48 @@ export const CartPage = () => {
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <Skeleton className="h-24 rounded-2xl" />
-        <Skeleton className="h-24 rounded-2xl" />
+        <Skeleton className="h-28 rounded-3xl" />
+        <Skeleton className="h-28 rounded-3xl" />
       </div>
     );
   }
 
   return (
-    <section className="space-y-4">
-      <h1 className="text-2xl font-semibold">Корзина</h1>
+    <section className="space-y-6">
+      <div className="space-y-2">
+        <Badge variant="light">Корзина</Badge>
+        <h1 className="text-heading font-bold text-brace-zinc">Ваш заказ</h1>
+        <p className="text-lg text-brace-neutral">Проверьте содержимое и оформите в мини приложении.</p>
+      </div>
+
       {isError ? (
-        <ErrorState
-          message="Не удалось загрузить корзину. Обновите данные."
-          onRetry={() => refetch()}
-        />
+        <ErrorState message="Не удалось загрузить корзину. Обновите данные." onRetry={() => refetch()} />
       ) : (
         <>
-          <CartList items={items} />
-          <CartSummary
-            totalMinorUnits={total}
-            isDisabled={!items.length || createOrder.isPending}
-            isLoading={createOrder.isPending}
-            onCheckout={() => createOrder.mutate()}
-          />
-          {createOrder.isError && (
-            <p className="text-sm text-red-300">
-              {(createOrder.error as Error | undefined)?.message || 'Не удалось оформить заказ.'}
-            </p>
-          )}
+          <div className="rounded-3xl border border-brace-surface bg-white/70 p-6">
+            <CartList items={items} />
+          </div>
+          <div className="rounded-3xl border border-brace-black bg-brace-black/90 p-6 text-white">
+            <CartSummary
+              totalMinorUnits={total}
+              isDisabled={!items.length || createOrder.isPending}
+              isLoading={createOrder.isPending}
+              onCheckout={() => createOrder.mutate()}
+            />
+            {createOrder.isError && (
+              <p className="mt-3 text-sm text-brace-red300">
+                {(createOrder.error as Error | undefined)?.message || 'Не удалось оформить заказ.'}
+              </p>
+            )}
+          </div>
           {lastOrder && (
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 space-y-2">
-              <p className="text-lg font-semibold">Последний заказ #{lastOrder.id}</p>
-              <p className="text-sm text-slate-300">
-                Сумма: <span className="font-semibold">{formatPrice(lastOrder.total_minor_units)}</span>
+            <div className="space-y-2 rounded-3xl border border-brace-surface bg-white/70 p-6">
+              <p className="text-lg font-semibold text-brace-zinc">Последний заказ #{lastOrder.id}</p>
+              <p className="text-brace-neutral">
+                Сумма: <span className="font-semibold text-brace-black">{formatPrice(lastOrder.total_minor_units)}</span>
               </p>
               {lastOrder.shipping_address && (
-                <p className="text-sm text-slate-300">Адрес: {lastOrder.shipping_address}</p>
+                <p className="text-brace-neutral">Адрес: {lastOrder.shipping_address}</p>
               )}
             </div>
           )}
